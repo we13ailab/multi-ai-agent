@@ -9,6 +9,8 @@ import com.javatechie.tool.OrderTools;
 import com.javatechie.tool.RefundTool;
 import dev.langchain4j.agentic.AgenticServices;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.service.tool.ToolArgumentsErrorHandler;
+import dev.langchain4j.service.tool.ToolExecutionErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,12 +20,19 @@ public class AgentConfig {
     @Bean
     public OrderAgent orderAgent(
             ChatModel chatModel,
-            OrderTools orderTools) {
+            OrderTools orderTools,
+            ToolArgumentsErrorHandler toolArgumentsErrorHandler,
+            ToolExecutionErrorHandler toolExecutionErrorHandler) {
 
         return AgenticServices
                 .agentBuilder(OrderAgent.class)
                 .chatModel(chatModel)
                 .tools(orderTools)
+                // Agents built via AgenticServices are not covered by the Spring Boot
+                // starter, so the shared handlers from ToolErrorHandlingConfig are
+                // wired explicitly here too.
+                .toolArgumentsErrorHandler(toolArgumentsErrorHandler)
+                .toolExecutionErrorHandler(toolExecutionErrorHandler)
                 .outputKey("orderDetails")
                 .build();
     }
@@ -31,12 +40,16 @@ public class AgentConfig {
     @Bean
     public RefundAgent refundAgent(
             ChatModel chatModel,
-            RefundTool refundTool) {
+            RefundTool refundTool,
+            ToolArgumentsErrorHandler toolArgumentsErrorHandler,
+            ToolExecutionErrorHandler toolExecutionErrorHandler) {
 
         return AgenticServices
                 .agentBuilder(RefundAgent.class)
                 .chatModel(chatModel)
                 .tools(refundTool)
+                .toolArgumentsErrorHandler(toolArgumentsErrorHandler)
+                .toolExecutionErrorHandler(toolExecutionErrorHandler)
                 .outputKey("refundDecision")
                 .build();
     }
