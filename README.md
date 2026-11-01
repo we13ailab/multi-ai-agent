@@ -371,23 +371,22 @@ USE javatechie;
 
 Hibernate will create the `orders` and `refund_policy` tables automatically due to `ddl-auto: update` (with `PhysicalNamingStrategyStandardImpl`, unannotated field names become column names as-is).
 
-Sample data:
+### Seed data
 
-```sql
-INSERT INTO orders (
-    order_id, customerName, productName, status,
-    currentLocation, expectedDelivery, totalAmount, paymentStatus
-) VALUES
-    ('ORD-1001', 'John Doe', 'iPhone 15', 'Shipped', 'Hyderabad', '2026-11-05', 999.00, 'PAID'),
-    ('ORD-1002', 'Jane Smith', 'MacBook Pro', 'Processing', 'Warehouse', '2026-11-10', 2499.00, 'PAID'),
-    ('ORD-1003', 'Bob Brown', 'AirPods Pro', 'Shipped', 'Bengaluru', '2026-11-03', 249.00, 'PAID');
+Sample data (orders + refund policies) is inserted automatically at startup from `src/main/resources/data.sql`, enabled by `spring.sql.init.mode: always` in `application.yaml` together with `spring.jpa.defer-datasource-initialization: true` (the script runs after Hibernate has created the tables). The script is idempotent — it uses `INSERT IGNORE` for `orders` (unique `order_id`) and `WHERE NOT EXISTS` guards for `refund_policy` — so restarts never duplicate rows and API-test mutations (e.g. cancelled orders) survive reboots.
 
-INSERT INTO refund_policy (orderStatus, eligible, message) VALUES
-    ('Shipped', false, 'Orders that have already been shipped cannot be refunded automatically. Contact support after delivery to arrange a return.'),
-    ('Processing', true, 'Orders still being processed are eligible for a full refund.'),
-    ('CANCELLED', true, 'Cancelled orders are refunded to the original payment method within 5 business days.'),
-    ('DELIVERED', false, 'Delivered orders must be returned within 30 days to qualify for a refund.');
-```
+The seeded `order_id` values match the Postman collection variables (`ORD-1001` … `ORD-1006`), so `multi-ai-agent.postman_collection.json` and `request.http` work out of the box:
+
+| order_id  | status     | Refund eligible | Cancellable | Purpose |
+|-----------|------------|-----------------|-------------|---------|
+| ORD-1001  | Shipped    | No              | No          | Refund/cancel negative case |
+| ORD-1002  | Processing | Yes             | Yes         | Cancel + full-refund case |
+| ORD-1003  | Shipped    | No              | No          | Cancel-shipped error case |
+| ORD-1004  | DELIVERED  | No              | Yes         | 30-day return-window case |
+| ORD-1005  | CANCELLED  | Yes             | Yes         | Refund-after-cancel case |
+| ORD-1006  | Packed     | No policy row   | Yes         | `RefundPolicyNotFoundException` case |
+
+To reset the data to its seed state, wipe the MySQL volume (`docker compose down --volumes`) or delete the rows manually and restart the app.
 
 ## Build and run commands
 

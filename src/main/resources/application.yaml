@@ -19,6 +19,16 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
     defer-datasource-initialization: true
 
+  sql:
+    init:
+      # Run src/main/resources/data.sql on every startup to seed orders and
+      # refund policies for the Postman/API tests. 'always' is required — the
+      # default 'embedded' mode only runs scripts for in-memory databases.
+      # Combined with spring.jpa.defer-datasource-initialization above, the
+      # script runs after Hibernate has created/updated the tables. The script
+      # itself is idempotent, so restarts never duplicate rows.
+      mode: always
+
 langchain4j:
   open-ai:
     chat-model:
